@@ -1,18 +1,13 @@
 import random
 import time
-from rich import print as rp
 from rich import box
 from rich.panel import Panel
-from rich.layout import Layout
-from rich.live import Live
 from rich.console import Console
 from rich.table import Table
 from rich.align import Align
 from rich.text import Text
-from rich.rule import Rule
 
-# user.User(user_number:int, resource_list=empty_list)
-# Resource.Resource
+
 MAX_TIME = 10
 MAX_RESOURCES = 10
 MAX_USERS = 10 
@@ -41,9 +36,9 @@ class Resource:
 
         if userChanged and self.current_user:
             self.current_user.toggleWorking()
-            print(f"DBG::TW-SJ")
+            # print(f"DBG::TW-SJ")
             self.queue.pop(self.queue.index(self.current_user))
-            print(f"DBG::{self.queue}::{self.current_user}")
+            # print(f"DBG::{self.queue}::{self.current_user}")
             self.is_available = False
             self.use_time = self.current_user.resource_requests[self]
         else:
@@ -132,10 +127,7 @@ class Controller:
         for res in self.res_list:
             res.startJob()
 
-        #DEBUG
-        # self.displayScreen()
-        # self.activateUnusedResources()
-        # self.displayScreen()
+
     def systemLoop(self):
         """
         main system loop
@@ -215,21 +207,15 @@ class Controller:
                 break
             if self.allResourceEmpty():
                 c += 1
-            
-            # check if time = 0, change User
-                 
-            # check if all queues empty
-            # 
     
 
     def updateTime(self):
         for res in self.res_list:
             if res.current_user:
-                # res.current_user.resource_requests[res] -= 1
                 res.use_time -= 1
                 if res.use_time == 0:
                     res.current_user.toggleWorking()
-                    print(f"DBG::UPDATE_TIME-TW()")
+                    # print(f"DBG::UPDATE_TIME-TW()")
                     if len(res.queue) > 0:
                         res.startJob()
                     else:
