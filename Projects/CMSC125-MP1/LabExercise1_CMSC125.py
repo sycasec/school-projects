@@ -1,16 +1,13 @@
 import random
 import time
 from rich import box
+from rich.prompt import IntPrompt, Confirm, InvalidResponse
 from rich.panel import Panel
 from rich.console import Console
 from rich.table import Table
 from rich.align import Align
 from rich.text import Text
 
-
-MAX_TIME = 10
-MAX_RESOURCES = 10
-MAX_USERS = 10 
 
 class Resource:
     def __init__(self, res_number:int):
@@ -57,20 +54,20 @@ class Resource:
 class User:
     # resource_list is a list of tuples
     # [(resource_actual, use_time), ... (resource_actual, use_time)]
-    def __init__(self, user_number: int, resource_list_copy: list[Resource]):
+    def __init__(self, user_number: int, resource_list_copy: list[Resource], max_res:int, max_tim:int):
         self.number = user_number
         self.name = f"User {user_number:02d}"
         self.resource_requests:dict = {}  # [resource_number, use_time]
         self.working = False
-        self.generateRequests(resource_list_copy)
+        self.generateRequests(resource_list_copy, max_res, max_tim)
 
-    def generateRequests(self, resource_list: list[Resource]): 
-        max_requests = random.randint(1, MAX_RESOURCES)
+    def generateRequests(self, resource_list: list[Resource], max_res:int, max_tim:int): 
+        max_requests = random.randint(1, max_res)
         user_request_temp = {}
 
         resources_reqs = random.choices(resource_list, k=max_requests)
         for key in resources_reqs:
-            user_request_temp[key] = random.randint(1, MAX_TIME)
+            user_request_temp[key] = random.randint(1, max_tim)
         
         self.resource_requests = user_request_temp
 
@@ -94,9 +91,9 @@ class User:
 
 
 class Controller:
-    def __init__(self):
-        self.n_users = random.randint(1,MAX_USERS)
-        self.n_res = random.randint(1,MAX_RESOURCES)
+    def __init__(self, max_res:int, max_usr:int, max_tim:int):
+        self.n_users = random.randint(1, max_usr)
+        self.n_res = random.randint(1, max_res)
         self.user_list = []
         self.res_list = []
 
@@ -104,7 +101,7 @@ class Controller:
             self.res_list.append(Resource(rn))
 
         for un in range(1,self.n_users+1):
-            self.user_list.append(User(un, self.res_list.copy()))
+            self.user_list.append(User(un, self.res_list.copy(), max_res, max_tim))
                     
 
     def appendResourceQueue(self, user: User):
@@ -128,7 +125,7 @@ class Controller:
             res.startJob()
 
 
-    def systemLoop(self):
+    def systemLoop(self, prog_secs: int):
         """
         main system loop
         """
@@ -150,7 +147,6 @@ class Controller:
 
         
         c = 0 
-        #with Live(centeredRt, console=loopConsole, screen=False, refresh_per_second=10):
         while True:
             loopConsole.clear() 
             #self.activateUnusedResources() 
@@ -201,7 +197,7 @@ class Controller:
             loopConsole.print(resPanel, justify="center")
             loopConsole.print(usrpanel, justify="center")
                 
-            time.sleep(2)
+            time.sleep(prog_secs)
             self.updateTime()
             if c == 1:
                 break
@@ -321,5 +317,58 @@ class Controller:
         return self.res_list[resource_number - 1].is_available
 
 if __name__ == "__main__":
-    command = Controller()
-    command.systemLoop()
+    tempConsole = Console()
+    tempConsole.clear()
+    pTxt = Text()
+    uTxt = Text()
+    tTxt = Text()
+    pTxt.append("Maximum amount of ")
+    pTxt.append(" resources ", style="bold #03DAC5")
+    pTxt.append("(enter a number between [b]1[/b] and [b]30[/b]) - default")
+
+    uTxt.append("Maximum amount of ")
+    uTxt.append(" users ", style="bold #dd8ef5")
+    uTxt.append("(enter a number between [b]1[/b] and [b]30[/b]) - default")
+
+    tTxt.append("Maximum amount of")
+    tTxt.append(" time ", style="bold #812ff5")
+    tTxt.append("(enter a number between [b]1[/b] and [b]30[/b]) - default")
+
+    while True:
+        c_resn = IntPrompt.ask(pTxt, default=30)
+        if 1 <= c_resn <= 30:
+            break
+        InvalidResponse(f"You entered: {c_resn} - please choose between 1-30")
+
+    while True:
+        c_usrn = IntPrompt.ask(uTxt, default=30)
+        if 1 <= c_usrn <= 30:
+            break    
+        InvalidResponse(f"You entered: {u_resn} - please choose between 1-30")
+
+    while True:
+        c_time = IntPrompt.ask(tTxt, default=30)
+        if 1 <= c_time <= 30:
+            break
+        InvalidResponse(f"You entered: {c_time} - please choose between 1-30")
+
+    dTxt = Text(justify="center")
+    dTxt.append("Total Resources: ")
+    dTxt.append(f"{c_resn}\n\n", style="bold #03DAC5")
+    dTxt.append("Total Users: ")
+    dTxt.append(f"{c_usrn}\n\n", style="bold #dd8ef5")
+    dTxt.append("Total Time: ")
+    dTxt.append(f"{c_time}", style="bold #812ff5")
+    dp = Panel.fit(dTxt)
+    dp.border_style=('#66ed73')
+
+    tempConsole.print(dp, justify="center")
+    if Confirm.ask("\n\n[b]Proceed with these settings?[/b]", default=True):
+        command = Controller(c_resn, c_usrn, c_time)
+        command.systemLoop(1)
+    else:
+        eTxt = Text(justify="center")
+        eTxt.append("execution halted : user input [n]")
+        eP = Panel.fit(eTxt)
+        eP.border_style = ('#bf2e35')
+        console.print(Panel.fit(eTxt), justify="center")
