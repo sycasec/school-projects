@@ -33,15 +33,11 @@ class Resource:
 
         if userChanged and self.current_user:
             self.current_user.toggleWorking()
-            # print(f"DBG::TW-SJ")
             self.queue.pop(self.queue.index(self.current_user))
-            # print(f"DBG::{self.queue}::{self.current_user}")
             self.is_available = False
             self.use_time = self.current_user.resource_requests[self]
         else:
             self.deactivateResource()
-        # if not self.current_user.working:
-        #     self.current_user.toggleWorking()
 
     def appendPriorityQueue(self, user_request):
         self.queue.append(user_request)
@@ -52,12 +48,10 @@ class Resource:
 
 
 class User:
-    # resource_list is a list of tuples
-    # [(resource_actual, use_time), ... (resource_actual, use_time)]
     def __init__(self, user_number: int, resource_list_copy: list[Resource], max_res:int, max_tim:int):
         self.number = user_number
         self.name = f"User {user_number:02d}"
-        self.resource_requests:dict = {}  # [resource_number, use_time]
+        self.resource_requests:dict = {}  
         self.working = False
         self.generateRequests(resource_list_copy, max_res, max_tim)
 
@@ -133,8 +127,7 @@ class Controller:
         self.initSystem()
         self.activateUnusedResources()
         loopConsole = Console()
-        
-        
+     
         # resTable.border_style=('#b0a4ff')
 
         statusText = Text(justify="center")
@@ -143,6 +136,7 @@ class Controller:
         statusText.append(f"{self.n_res}", style="bold #00ff00")
         statusText.append("\n\nTotal Users: ", style="bold")
         statusText.append(f"{self.n_users}", style="bold #ff8000")
+        # statusText.append(f"\n\n[p] - pause simulation  || [q] - quit simulation || [s] - change simulation speed")
         mainPanel = Panel(statusText)
 
         
@@ -151,7 +145,7 @@ class Controller:
             loopConsole.clear() 
             #self.activateUnusedResources() 
             
-            # A LOT OF SHIT
+            # <<< Table Data Generation <<<
             resTable = Table(title="Resources Table")
             resTable.add_column("Resources", justify="left", style="cyan")
             resTable.add_column("Current User", justify="center", style="")
@@ -181,6 +175,8 @@ class Controller:
                     f"{[k.number for k in u.resource_requests.keys()]}"
                 )
 
+            # >>> Table Data Generation End >>>
+
             usrTable.box = box.SIMPLE_HEAD
             usrTable.border_style=("#ff7270")
             resTable.title_style=("bold")
@@ -190,9 +186,7 @@ class Controller:
             centeredRt = Align.center(resTable)
             resPanel = Panel.fit(centeredRt)
             resPanel.border_style=('#a4e7ff')
-            
-            # A LOT OF SHIT ENDS
-
+        
             loopConsole.print(mainPanel, justify="center")
             loopConsole.print(resPanel, justify="center")
             loopConsole.print(usrpanel, justify="center")
@@ -220,7 +214,6 @@ class Controller:
                 res.startJob()
 
 
-
     def checkUserStatus(self, user: User):
         if user.isAllDone(self.res_list):
             return "All Done!"
@@ -234,12 +227,7 @@ class Controller:
             return 'IDLE'
         else:
             return f"{res.use_time}s"
-
-    
-    def debugDisplay(self):
-        table = Table(title="DEBUG")
-        table.add_column("")
-    
+   
     def findLongestUsetime(self, resource: Resource):
         if len(resource.queue) > 0:
              return max(resource.queue, key=lambda user: user.resource_requests[resource])
@@ -304,17 +292,7 @@ class Controller:
                     else:
                         return
                 
-     
-
-    def forceUsers(self, amt_users:int):
-        self.n_users = amt_users
-
-    def forceResources(self, amt_res:int):
-        self.n_res = amt_res
-
-
-    def getResourceStat(self, resource_number:int) -> bool:
-        return self.res_list[resource_number - 1].is_available
+    
 
 if __name__ == "__main__":
     tempConsole = Console()
