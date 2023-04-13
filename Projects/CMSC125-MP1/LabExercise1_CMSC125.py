@@ -1,11 +1,12 @@
 import random
 import time
 from rich import box
+from rich.columns import Columns
 from rich.prompt import IntPrompt, Confirm, InvalidResponse
 from rich.panel import Panel
 from rich.console import Console
 from rich.table import Table
-from rich.align import Align
+from rich.align import AlignMethod
 from rich.text import Text
 
 
@@ -35,6 +36,7 @@ class Resource:
             self.current_user.toggleWorking()
             self.queue.pop(self.queue.index(self.current_user))
             self.is_available = False
+            # print(f"DBG::{self.current_user.name}::{self.current_user.resource_requests}")
             self.use_time = self.current_user.resource_requests[self]
         else:
             self.deactivateResource()
@@ -52,6 +54,7 @@ class User:
         self.number = user_number
         self.name = f"User {user_number:02d}"
         self.resource_requests:dict = {}  
+        self.requests_backup = {}
         self.working = False
         self.generateRequests(resource_list_copy, max_res, max_tim)
 
@@ -64,6 +67,10 @@ class User:
             user_request_temp[key] = random.randint(1, max_tim)
         
         self.resource_requests = user_request_temp
+        self.requests_backup = user_request_temp.copy()
+
+    def rearmRequests(self):
+        self.resource_requests = self.requests_backup
 
     def isAllDone(self, resource_list: list[Resource]):
         for res in resource_list:
@@ -118,8 +125,22 @@ class Controller:
         for res in self.res_list:
             res.startJob()
 
+    def prettyPrint(self, queue: list, iR=True):
+        if len(queue) > 3:
+            return f"{'User' if iR else 'Resource':}: {queue[0].number if iR else queue[0]}, {queue[1].number if iR else queue[1]}, {queue[2].number if iR else queue[2]}..."
+        elif len(queue) == 0:
+            return "FREE"
+        else:
+            return f"{'User' if iR else 'Resource'}: {', '.join(str(i.number) for i in queue) if iR else ', '.join(str(i) for i in queue)}"
 
-    def systemLoop(self, prog_secs: int):
+    def preSim(self):
+        time = self.systemLoop(prog_secs=0, timer=True)
+        for usr in self.user_list:
+            usr.rearmRequests()
+        self.systemLoop(prog_secs=1, timer=False, timeleft=time-1)
+        
+
+    def systemLoop(self, prog_secs: int, timer=False, timeleft=None):
         """
         main system loop
         """
@@ -130,35 +151,42 @@ class Controller:
      
         # resTable.border_style=('#b0a4ff')
 
-        statusText = Text(justify="center")
-        statusText.append("Lab Exercise 1")
-        statusText.append("\n\nTotal Resources: ", style="bold")
-        statusText.append(f"{self.n_res}", style="bold #00ff00")
-        statusText.append("\n\nTotal Users: ", style="bold")
-        statusText.append(f"{self.n_users}", style="bold #ff8000")
-        # statusText.append(f"\n\n[p] - pause simulation  || [q] - quit simulation || [s] - change simulation speed")
-        mainPanel = Panel(statusText)
-
         
-        c = 0 
+
+        c=False
+        t=0
         while True:
             loopConsole.clear() 
             #self.activateUnusedResources() 
             
+            # Status Panel
+            statusText = Text(justify="center")
+            statusText.append("Lab Exercise 1")
+            statusText.append("\n\nTotal Resources: ", style="bold")
+            statusText.append(f"{self.n_res}", style="bold #00ff00")
+            statusText.append("\n\nTotal Users: ", style="bold")
+            statusText.append(f"{self.n_users}", style="bold #ff8000")
+            if timeleft:
+                statusText.append(f"\n\nTime remaining: {timeleft}s")
+                timeleft -= 1
+            # statusText.append(f"\n\n[p] - pause simulation  || [q] - quit simulation || [s] - change simulation speed")
+            mainPanel = Panel(statusText)
+
+
             # <<< Table Data Generation <<<
             resTable = Table(title="Resources Table")
             resTable.add_column("Resources", justify="left", style="cyan")
-            resTable.add_column("Current User", justify="center", style="")
-            resTable.add_column("Time Left", justify="center")
+            resTable.add_column("Serving", justify="center", style="")
+            resTable.add_column("Time", justify="center")
             resTable.add_column("Queue", justify="center")
-            resTable.add_column("Next User", justify="left")
+            resTable.add_column("Next", justify="left")
 
             for res in self.res_list:
                 resTable.add_row(
                     f"{res.name}",
                     f"{res.current_user.name if res.current_user else 'IDLE'}",
                     self.getResourceTime(res),
-                    f"{[u.number for u in res.queue]}",
+                    self.prettyPrint(res.queue),
                     f"{res.queue[0].name if len(res.queue) > 0 else 'FREE'}"
                 )
 
@@ -172,44 +200,57 @@ class Controller:
                 usrTable.add_row(
                     f"{u.name}",
                     f"{self.checkUserStatus(u)}",
-                    f"{[k.number for k in u.resource_requests.keys()]}"
+                    self.prettyPrint([k.number for k in u.resource_requests.keys()], False)
                 )
 
             # >>> Table Data Generation End >>>
 
             usrTable.box = box.SIMPLE_HEAD
             usrTable.border_style=("#ff7270")
-            resTable.title_style=("bold")
-            usrpanel = Panel.fit(usrTable)
+            resTable.title_style=("bold #dd8ef5")
+            resTable.box = box.SIMPLE_HEAD
+            usrpanel = Panel.fit(
+                Columns([resTable, usrTable], expand=True, equal=True, align="center"),
+                title="Multiprogramming System",
+                title_align="left",
+                padding=(1,2),
+                width=140
+            )
             usrpanel.border_style=("#ff70b3")
+            usrpanel.title_style="#812ff5"
             
-            centeredRt = Align.center(resTable)
-            resPanel = Panel.fit(centeredRt)
-            resPanel.border_style=('#a4e7ff')
-        
-            loopConsole.print(mainPanel, justify="center")
-            loopConsole.print(resPanel, justify="center")
-            loopConsole.print(usrpanel, justify="center")
+            # resPanel = Panel.fit(centeredRt)
+            # resPanel.border_style=('#a4e7ff')
+            
+            if not timer:
+                loopConsole.print(mainPanel, justify="center")
+            # loopConsole.print(resPanel, justify="center")
+                loopConsole.print(usrpanel, justify="center")
                 
             time.sleep(prog_secs)
+            if timer:
+                t += 1
             self.updateTime()
-            if c == 1:
+            self.activateUnusedResources()
+            if c == True:
+                if timer:
+                    return t
                 break
             if self.allResourceEmpty():
-                c += 1
+                c = True
     
 
     def updateTime(self):
         for res in self.res_list:
             if res.current_user:
                 res.use_time -= 1
-                if res.use_time == 0:
-                    res.current_user.toggleWorking()
-                    # print(f"DBG::UPDATE_TIME-TW()")
-                    if len(res.queue) > 0:
-                        res.startJob()
-                    else:
-                        res.deactivateResource()
+            if res.use_time == 0:
+                res.current_user.toggleWorking()
+                # print(f"DBG::UPDATE_TIME-TW()")
+                if len(res.queue) > 0:
+                    res.startJob()
+                else:
+                    res.deactivateResource()
             if res.is_available and len(res.queue) > 0:
                 res.startJob()
 
@@ -240,7 +281,7 @@ class Controller:
     def findEarliestQueue(self, usr: User):
         q_idx = {}
         for res in self.res_list:
-            print(f"DBG::{q_idx}::{usr}::{[u.name for u in res.queue]}")
+            # print(f"DBG::{q_idx}::{usr}::{[u.name for u in res.queue]}")
             if usr in res.queue:
                 q_idx[res] = res.queue.index(usr)
         if q_idx:
@@ -254,8 +295,7 @@ class Controller:
             return False
         return True
 
-
-    # THIS THING IS SO BUGGY I MIGHT AS WELL NOT.
+    # for some reason this works now
     def activateUnusedResources(self): 
         # print(f"DBG::ENTERED_FUNCTION")
         unused_res = []
@@ -278,14 +318,16 @@ class Controller:
                 if not usr.working:
                     # find res where usr is in min queue and remove
                     res_ref = self.findEarliestQueue(usr)
+                    # print(f"DBG::EQ={res_ref.name if res_ref else None}::{[u.name for u in res_ref.queue] if res_ref else None}")
                     if res_ref:
                         res_ref.queue.remove(usr)
 
                         # remove user's request for original resource
                         # add new request for unused resource
                         time = usr.resource_requests[res_ref]
-                        usr.resource_requests[r] = time
                         del usr.resource_requests[res_ref]
+                        usr.resource_requests[r] = time
+                        # print(f"DBG::{usr.name}::TIME={usr.resource_requests[r]}::{r.name}")
                         r.queue.insert(0, usr)
                         r.startJob()
                         break
@@ -302,33 +344,38 @@ if __name__ == "__main__":
     tTxt = Text()
     pTxt.append("Maximum amount of ")
     pTxt.append(" resources ", style="bold #03DAC5")
-    pTxt.append("(enter a number between [b]1[/b] and [b]30[/b]) - default")
+    pTxt.append("(enter a number between 1 and 30) - default")
 
     uTxt.append("Maximum amount of ")
     uTxt.append(" users ", style="bold #dd8ef5")
-    uTxt.append("(enter a number between [b]1[/b] and [b]30[/b]) - default")
+    uTxt.append("(enter a number between 1 and 30) - default")
 
     tTxt.append("Maximum amount of")
     tTxt.append(" time ", style="bold #812ff5")
-    tTxt.append("(enter a number between [b]1[/b] and [b]30[/b]) - default")
+    tTxt.append("(enter a number between 1 and 30) - default")
+
+    def genErr(errmsg):
+        eTxt = Text()
+        eTxt.append(f"ERROR! value entered is out of bounds -> {errmsg}", style="bold #bf2e35")
+        return eTxt
 
     while True:
         c_resn = IntPrompt.ask(pTxt, default=30)
         if 1 <= c_resn <= 30:
             break
-        InvalidResponse(f"You entered: {c_resn} - please choose between 1-30")
+        tempConsole.print(genErr(c_resn))
 
     while True:
         c_usrn = IntPrompt.ask(uTxt, default=30)
         if 1 <= c_usrn <= 30:
             break    
-        InvalidResponse(f"You entered: {u_resn} - please choose between 1-30")
+        tempConsole.print(genErr(c_usrn))
 
     while True:
         c_time = IntPrompt.ask(tTxt, default=30)
         if 1 <= c_time <= 30:
             break
-        InvalidResponse(f"You entered: {c_time} - please choose between 1-30")
+        tempConsole.print(genErr(c_time))
 
     dTxt = Text(justify="center")
     dTxt.append("Total Resources: ")
@@ -343,10 +390,10 @@ if __name__ == "__main__":
     tempConsole.print(dp, justify="center")
     if Confirm.ask("\n\n[b]Proceed with these settings?[/b]", default=True):
         command = Controller(c_resn, c_usrn, c_time)
-        command.systemLoop(1)
+        command.preSim()
     else:
         eTxt = Text(justify="center")
         eTxt.append("execution halted : user input [n]")
         eP = Panel.fit(eTxt)
         eP.border_style = ('#bf2e35')
-        console.print(Panel.fit(eTxt), justify="center")
+        tempConsole.print(eP, justify="center")
