@@ -1,5 +1,4 @@
 import random
-import os 
 import time
 from rich import box
 from rich.columns import Columns
@@ -37,7 +36,7 @@ class Resource:
             self.current_user.toggleWorking()
             self.queue.pop(self.queue.index(self.current_user))
             self.is_available = False
-            # print(f"DBG::{self.current_user.name}::{self.current_user.resource_requests}")
+            print(f"DBG::{self.current_user.name}::{self.current_user.resource_requests}")
             self.use_time = self.current_user.resource_requests[self]
         else:
             self.deactivateResource()
@@ -152,13 +151,13 @@ class Controller:
      
         # resTable.border_style=('#b0a4ff')
 
+        
+
         c=False
         t=0
         while True:
-            # loopConsole.clear() 
+            loopConsole.clear() 
             #self.activateUnusedResources() 
-            os.system('clear')
-            
             
             # Status Panel
             statusText = Text(justify="center")
@@ -220,9 +219,12 @@ class Controller:
             usrpanel.border_style=("#ff70b3")
             usrpanel.title_style="#812ff5"
             
-
+            # resPanel = Panel.fit(centeredRt)
+            # resPanel.border_style=('#a4e7ff')
+            
             if not timer:
                 loopConsole.print(mainPanel, justify="center")
+            # loopConsole.print(resPanel, justify="center")
                 loopConsole.print(usrpanel, justify="center")
                 
             time.sleep(prog_secs)
@@ -242,15 +244,16 @@ class Controller:
         for res in self.res_list:
             if res.current_user:
                 res.use_time -= 1
+        for res in self.res_list:
             if res.use_time == 0:
                 res.current_user.toggleWorking()
-                # print(f"DBG::UPDATE_TIME-TW()")
-                if len(res.queue) > 0:
-                    res.startJob()
-                else:
-                    res.deactivateResource()
-            if res.is_available and len(res.queue) > 0:
+                res.startJob
+                    # print(f"DBG::UPDATE_TIME-TW()")
+        for res in self.res_list:
+            if res.is_available and len(res.queue) > 0 and (res.use_time is None or res.use_time == 0):
                 res.startJob()
+            else:
+                res.deactivateResource()
 
 
     def checkUserStatus(self, user: User):
@@ -295,23 +298,28 @@ class Controller:
 
     # for some reason this works now
     def activateUnusedResources(self): 
-        # loop through all unused resources 
-        # by checking if they have no current user
+        print(f"DBG::ENTERED_FUNCTION")
         unused_res = []
         for res in self.res_list:
-            if not res.current_user:
+            if not res.current_user and res.is_available:
                 unused_res.append(res)
 
         
+        print(f"DBG::UNUSED_RES::{[r.number for r in unused_res]}")
         if self.allResourceEmpty():
             return
+        # if len(unused_res) > 0:
+        #     for r in unused_res:
         while len(unused_res) > 0:
             r = unused_res.pop(0)
+            print(f"DBG::CURR_R={r.name}::URLEN={len(unused_res)}")
             if self.areUsersBusy(): break
             for usr in self.user_list:
+                print(f"DBG::USR#={usr.name}::STAT={usr.working}")
                 if not usr.working:
-                    # find the resource which has the shortest wait time for USR
+                    # find res where usr is in min queue and remove
                     res_ref = self.findEarliestQueue(usr)
+                    print(f"DBG::EQ={res_ref.name if res_ref else None}::{[u.name for u in res_ref.queue] if res_ref else None}")
                     if res_ref:
                         res_ref.queue.remove(usr)
 
@@ -320,6 +328,7 @@ class Controller:
                         time = usr.resource_requests[res_ref]
                         del usr.resource_requests[res_ref]
                         usr.resource_requests[r] = time
+                        print(f"DBG::{usr.name}::TIME={usr.resource_requests[r]}::{r.name}")
                         r.queue.insert(0, usr)
                         r.startJob()
                         break
@@ -346,10 +355,10 @@ if __name__ == "__main__":
     tTxt.append(" time ", style="bold #812ff5")
     tTxt.append("(enter a number between 1 and 30) - default")
 
-    def genErr(errmsg):
-        eTxt = Text()
-        eTxt.append(f"ERROR! value entered is out of bounds -> {errmsg}", style="bold #bf2e35")
-        return eTxt
+    def genErr(errmsg: str):
+        errTxt = Text()
+        errTxt.append(f"ERROR: you entered {errmsg}!", style="bold #bf2e35")
+        return errTxt
 
     while True:
         c_resn = IntPrompt.ask(pTxt, default=30)
@@ -363,11 +372,13 @@ if __name__ == "__main__":
             break    
         tempConsole.print(genErr(c_usrn))
 
+
     while True:
         c_time = IntPrompt.ask(tTxt, default=30)
         if 1 <= c_time <= 30:
-            break
+            break 
         tempConsole.print(genErr(c_time))
+
 
     dTxt = Text(justify="center")
     dTxt.append("Total Resources: ")
