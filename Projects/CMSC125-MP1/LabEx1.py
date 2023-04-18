@@ -5,6 +5,7 @@ from rich import box
 from rich.columns import Columns
 from rich.prompt import IntPrompt, Confirm, InvalidResponse
 from rich.panel import Panel
+from rich.layout import Layout
 from rich.console import Console
 from rich.table import Table
 from rich.align import AlignMethod
@@ -205,11 +206,12 @@ class Controller:
                 )
 
             # >>> Table Data Generation End >>>
-
+            
             usrTable.box = box.SIMPLE_HEAD
             usrTable.border_style=("#ff7270")
             resTable.title_style=("bold #dd8ef5")
             resTable.box = box.SIMPLE_HEAD
+            layout = Layout()
             usrpanel = Panel.fit(
                 Columns([resTable, usrTable], expand=True, equal=True, align="center"),
                 title="Multiprogramming System",
