@@ -18,8 +18,8 @@ def presimLoop(ctrl: Controller) -> list[int]:
     # ctrl.activateUnusedResources()
     final_loop = False
     timer = 0
-    # debugConsole = Console()
-    # local = generateLayout() 
+    debugConsole = Console()
+    local = generateLayout() 
     
     while True:
         timer += 1
@@ -45,12 +45,12 @@ def generateLayout() -> Layout:
     """define display layout""" 
     layout = Layout(name = "root")
 
-    layout.split_row(
-        Layout(name="header", size=35),
+    layout.split(
+        Layout(name="header", size=13),
         Layout(name="main", ratio=2),
     )
 
-    layout["main"].split_column(
+    layout["main"].split_row(
         Layout(name="Resource"),
         Layout(name="Users"),
     )
