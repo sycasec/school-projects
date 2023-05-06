@@ -3,6 +3,7 @@ from copy import deepcopy
 class ProcessControlBoard:
     def __init__(self):
         self.process_dict = {}
+        self.pd_copy = {}
         self.headers = []
 
     def read_from_csv(self, filename):
@@ -12,16 +13,18 @@ class ProcessControlBoard:
             for line in file:
                 values = [int(i) for i in line.strip().split(',')]
                 self.process_dict[values[0]] = {'arrival': values[1], 'burst': values[2], 'prio': values[3], 'wait': -1}
+        self.pd_copy = deepcopy(self.process_dict)
 
     def get_process_dict_as_list(self) -> list:
-        p_list = []
+        process_list = []
         for item in self.process_dict:
+            p_list = []
             p_list.append(item)
             p_list.append(self.process_dict[item]['arrival'])
             p_list.append(self.process_dict[item]['burst'])
             p_list.append(self.process_dict[item]['prio'])
-
-        return p_list
+            process_list.append(p_list)
+        return process_list
 
     def srpt_solver(self, p_dict):
         ready_q = []
@@ -49,7 +52,7 @@ class ProcessControlBoard:
                 
                 if p_dict[shortest]['burst'] == 0:
                     completed[shortest] ={
-                        'finish': curr_time + 1,
+                        'finished': curr_time + 1,
                         'turnaround': (curr_time + 1) - p_dict[shortest]['arrival'],
                         'wait': ((curr_time + 1) - p_dict[shortest]['arrival']) - copy_dict[shortest]['burst']
                     }
@@ -63,7 +66,7 @@ class ProcessControlBoard:
         return dict(sorted(completed.items())), g_list, t_list
                 
 
-    def rr_solver(self, p_dict:dict, quantum:int) -> (dict, list, list):
+    def rr_solver(self, p_dict:dict, quantum:int=4) -> (dict, list, list):
         copy_dict = deepcopy(p_dict)
         curr_time = 0
         completed = {}
@@ -73,8 +76,8 @@ class ProcessControlBoard:
 
         while len(p_dict) > 0:
             for p in copy_dict:
-                for k, v in p_dict.items(): print(k, v, sep="::")
-                print(f"time={curr_time}")
+                # for k, v in p_dict.items(): print(k, v, sep="::")
+                # print(f"time={curr_time}")
                 if p in p_dict.keys() and p_dict[p]['burst'] > 0:
                     c_p = p
                 else:
@@ -86,7 +89,7 @@ class ProcessControlBoard:
                     if p_dict[c_p]['burst'] < 0: 
                         curr_time += p_dict[c_p]['burst']
                     completed[c_p] = {
-                        'finish': curr_time,
+                        'finished': curr_time,
                         'turnaround': curr_time,
                         'wait': curr_time - copy_dict[c_p]['burst']
                     }
