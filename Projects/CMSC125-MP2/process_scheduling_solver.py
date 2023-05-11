@@ -57,26 +57,40 @@ class Interface:
     def wrap_num(self, num) -> str:
         return f" {num:02d} "
 
-    def generateProcessPanel(self) -> Panel:
-        p_table = Table()
-        p_table.add_column("P#", justify="center")
-        p_table.add_column("A", justify="center")
-        p_table.add_column("BT", justify="center")
-        p_table.add_column("PRI", justify="center")
+    def generateProcessPanel(self, avg_turn, avg_wait) -> Panel:
+        # p_table = Table()
+        # p_table.add_column("P#", justify="center")
+        # p_table.add_column("A", justify="center")
+        # p_table.add_column("BT", justify="center")
+        # p_table.add_column("PRI", justify="center")
+        #
+        # for row in self.pcb.get_process_dict_as_list():
+        #     p_table.add_row(
+        #         f"{row[0]},",
+        #         f"{row[1]},",
+        #         f"{row[2]},",
+        #         f"{row[3]}",
+        #     )
+        # p_table.box = box.SIMPLE_HEAD
 
-        for row in self.pcb.get_process_dict_as_list():
-            p_table.add_row(
-                f"{row[0]},",
-                f"{row[1]},",
-                f"{row[2]},",
-                f"{row[3]}",
-            )
-        p_table.box = box.SIMPLE_HEAD
-        p_table.border_style=("#ff7270")
+        sPmsg = Table.grid(padding=1)
+        sPmsg.add_column(style="#a6e22e", justify="center")
+        sPmsg.add_column(no_wrap=True)
+        sPmsg.add_row(
+            "Avg Turnaround Time:",
+            f"[b #ff7270] {avg_turn}"
+        )
+        sPmsg.add_row(
+            "Avg Waiting Time:",
+            f"[b #ff9999] {avg_wait}"
+        )
+
+        sPmsg.border_style=("#ff7270")
         
         p_Panel = Panel(
-            Align.center(p_table),
+            Align.center(sPmsg),
             box=box.ROUNDED,
+            padding=[3,0,0,0],
             border_style="#f82558",
         )
   
@@ -169,9 +183,9 @@ class Interface:
             if tl > 3:
                 gText.append(f"{t_list[t_index]:02d}   {t_list[t_index+1]:02d}")
                 # print(t_list[t_index+8])
-                print(f"deb::{tl + t_index}=tl({tl})+({t_index})::start={t_list[t_index]}::end={t_list[-1]},{t_list.index(t_list[-1])}")
+                # print(f"deb::{tl + t_index}=tl({tl})+({t_index})::start={t_list[t_index]}::end={t_list[-1]},{t_list.index(t_list[-1])}")
                 for i in range(t_index + 2, t_index + tl - 1):
-                    print(i)
+                    # print(i)
                     gText.append(f"{' '*3 if t_list[i-1]>99 else ' '*4}{t_list[i]:02d}")
                 gText.append(f"{' '*3 if t_list[t_index+tl-2] < 100 else ' ' * 2}{t_list[t_index+tl-1]:02d}")
             # else:
@@ -246,7 +260,12 @@ class Interface:
                 table, g_list, t_list = self.pcb.rr_solver(deepcopy(self.pcb.process_dict), quantum)
                 lt['gantt_display'].update(self.generateRRGantt(g_list, t_list))
 
-        lt['process_dict'].update(self.generateProcessPanel())
+        avg_turn = sum([table[i]['turnaround'] for i in table.keys()])/len(table.keys())
+        avg_wait = sum([table[i]['wait'] for i in table.keys()])/len(table.keys())
+
+        # print(f"deb::avgturn={avg_turn}::avgwait={avg_wait}")
+
+        lt['process_dict'].update(self.generateProcessPanel(avg_turn, avg_wait))
         lt['tables'].update(self.generateCalculationsPanel(f"{method}", table))
         tc.print(lt)
     
