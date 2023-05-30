@@ -111,7 +111,7 @@ def ratio_resolve(total: int, edges: List[Edge]) -> List[int]:
             remainder = 0.0
             for index, edge in flexible_edges:
                 remainder, size = _modf(portion * edge.ratio + remainder)
-                sizes[index] = int(size)
+        sizes[index] = int(size)
             break
     # Sizes now contains integers only
     return cast(List[int], sizes)

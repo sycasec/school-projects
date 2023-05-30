@@ -110,7 +110,9 @@ class Interface:
         gText.append(f"{(self.g_sym['tb_mid'] + self.g_sym['tp_cls'])}\n")
 
         for n in g_list:
-            gText.append(f"{self.g_sym['mid_op'] + self.g_sym['md_mid'](n) + self.g_sym['mid_op']}")
+            gText.append(f"{self.g_sym['mid_op']}")
+            gText.append(f"{self.g_sym['md_mid'](n)}", style="bold #a6e22e")
+            gText.append(f"{self.g_sym['mid_op']}")
         gText.append('\n')
 
         gText.append(self.g_sym['bot_op'])
@@ -145,7 +147,9 @@ class Interface:
             gText.append(f"{(self.g_sym['tb_mid'] + self.g_sym['tp_cls'])}\n")
             
             for i in range(30):
-                gText.append(f"{self.g_sym['mid_op'] + self.g_sym['md_mid'](g_list[g_index]) + self.g_sym['mid_op']}")
+                gText.append(f"{self.g_sym['mid_op']}")
+                gText.append(f"{self.g_sym['md_mid'](g_list[g_index])}", style="bold #a6e22e")
+                gText.append(f"{self.g_sym['mid_op']}")
                 g_index += 1
             gText.append('\n')
             
@@ -171,7 +175,9 @@ class Interface:
             gText.append(f"{(self.g_sym['tb_mid'] + self.g_sym['tp_cls'])}\n")
 
             for i in range(gl):
-                gText.append(f"{self.g_sym['mid_op'] + self.g_sym['md_mid'](g_list[g_index]) + self.g_sym['mid_op']}")
+                gText.append(f"{self.g_sym['mid_op']}")
+                gText.append(f"{self.g_sym['md_mid'](g_list[g_index])}", style="bold #a6e22e")
+                gText.append(f"{self.g_sym['mid_op']}")
                 g_index += 1
             gText.append('\n') 
 
@@ -222,7 +228,13 @@ class Interface:
                 f"{completed[p]['turnaround']}",
                 f"{completed[p]['wait']}",
             )
-        c_table.box=box.SIMPLE_HEAD
+        # c_table.box=box.SIMPLE_HEAD
+        # c_table.columns.style="cyan"
+        
+        for i in c_table.columns:
+            i.style="cyan"
+
+        c_table.row_styles=["none", "dim"]
 
         c_panel = Panel(
             Align.center(c_table),
@@ -268,12 +280,91 @@ class Interface:
         lt['process_dict'].update(self.generateProcessPanel(avg_turn, avg_wait))
         lt['tables'].update(self.generateCalculationsPanel(f"{method}", table))
         tc.print(lt)
+
+    def eval_control(self, file, method):
+        fcopy = deepcopy(file)
+
+        m_dict = {
+            "FCFS": self.pcb.fcfs_solver,
+            "SJF": self.pcb.sjf_solver,
+            "SRPT": self.pcb.srpt_solver,
+            "PRIO": self.pcb.prio_solver,
+            "RR": self.pcb.rr_solver,
+        }
+
+        x, g, t = m_dict[method](fcopy)
+        return x, g, t
+ 
+
+    def evaluate(self):
+        process_file_copy = deepcopy(self.pcb.process_dict)
+        fcfs_dict, fcfs_g, fcfs_t = self.eval_control(process_file_copy, "FCFS") 
+        sjf_dict, sjf_g, sjf_t = self.eval_control(process_file_copy, "SJF") 
+        srpt_dict, srpt_g, srpt_t = self.eval_control(process_file_copy, "SRPT") 
+        prio_dict, prio_g, prio_t = self.eval_control(process_file_copy, "PRIO") 
+        rr_dict, rr_g, rr_t = self.eval_control(process_file_copy, "RR") 
+
+        rTable = Table(title="Method Evaluation")
+        rTable.add_column("Method", justify="right")
+        rTable.add_column("Avg. Turnaround", justify="center")
+        rTable.add_column("Avg. Wait", justify="center")
+        rTable.add_row(
+            "FCFS",
+            f"{sum([fcfs_dict[i]['turnaround'] for i in fcfs_dict.keys()])/len(fcfs_dict.keys())}",
+            f"{sum([fcfs_dict[i]['wait'] for i in fcfs_dict.keys()])/len(fcfs_dict.keys())}"
+        )
+        rTable.add_row(
+            "SJF",
+            f"{sum([sjf_dict[i]['turnaround'] for i in sjf_dict.keys()])/len(sjf_dict.keys())}",
+            f"{sum([sjf_dict[i]['wait'] for i in sjf_dict.keys()])/len(sjf_dict.keys())}"
+        )
+        rTable.add_row(
+            "SRPT",
+            f"{sum([srpt_dict[i]['turnaround'] for i in srpt_dict.keys()])/len(srpt_dict.keys())}",
+            f"{sum([srpt_dict[i]['wait'] for i in srpt_dict.keys()])/len(srpt_dict.keys())}"
+        )
+        rTable.add_row(
+            "PRIO",
+            f"{sum([prio_dict[i]['turnaround'] for i in prio_dict.keys()])/len(prio_dict.keys())}",
+            f"{sum([prio_dict[i]['wait'] for i in prio_dict.keys()])/len(prio_dict.keys())}"
+        )
+        rTable.add_row(
+            "RR",
+            f"{sum([rr_dict[i]['turnaround'] for i in rr_dict.keys()])/len(rr_dict.keys())}",
+            f"{sum([rr_dict[i]['wait'] for i in rr_dict.keys()])/len(rr_dict.keys())}"
+        )
+        rTable.columns[0].style="#be84ff"
+        rTable.columns[1].style="#66d9ef"
+        rTable.columns[2].style="#f82558"
+
+        # ePanel = Panel(
+        #     Align.center(rTable),
+        #     box=box.ROUNDED,
+        #     border_style = "#a6e22e"
+        # )
+        ePanel = Panel.fit(Align.center(rTable))
+        ePanel.box=box.ROUNDED
+        ePanel.border_style=("#a6e22e")
+
+        return ePanel
+
+
     
     # def main(self):
     #     with Live(self.generateMainDisplay(), refresh_per_second=4, screen=False) as live:
     #         while True:
     #             live.update(self.generateMainDisplay())
     #             break
+
+
+def eval(filename:str):
+    app = Interface()
+    console = Console()
+    
+    app.read_file(filename)
+    console.print(app.evaluate(), justify="center")
+
+
 
 def main():
     app = Interface()
@@ -288,6 +379,9 @@ def main():
         if os.path.isfile(sys.argv[1]):
             fname = sys.argv[1]
             app.read_file(sys.argv[1])
+        elif sys.argv[1] == "--eval":
+            eval(sys.argv[2])
+            return
         else:
             mc.print(genErr(f"file not found, {sys.argv[1]} does not exist!")) 
             return   

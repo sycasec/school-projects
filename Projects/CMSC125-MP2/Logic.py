@@ -15,6 +15,9 @@ class ProcessControlBoard:
                 self.process_dict[values[0]] = {'arrival': values[1], 'burst': values[2], 'prio': values[3], 'wait': -1}
         self.pd_copy = deepcopy(self.process_dict)
 
+    def regenerate_process_dict(self):
+        self.process_dict = deepcopy(self.pd_copy)
+
     def get_process_dict_as_list(self) -> list:
         process_list = []
         for item in self.process_dict:
@@ -26,7 +29,7 @@ class ProcessControlBoard:
             process_list.append(p_list)
         return process_list
 
-    def srpt_solver(self, p_dict):
+    def srpt_solver(self, p_dict) -> (dict, list, list):
         ready_q = []
         copy_dict = deepcopy(p_dict) 
 
@@ -53,7 +56,8 @@ class ProcessControlBoard:
                 if p_dict[shortest]['burst'] == 0:
                     completed[shortest] ={
                         'finished': curr_time + 1,
-                        'turnaround': (curr_time + 1) - p_dict[shortest]['arrival'],
+                        # 'turnaround': (curr_time + 1) - p_dict[shortest]['arrival'],
+                        'turnaround': (curr_time + 1),
                         'wait': ((curr_time + 1) - p_dict[shortest]['arrival']) - copy_dict[shortest]['burst']
                     }
 
@@ -63,6 +67,7 @@ class ProcessControlBoard:
             curr_time +=1 
         t_list.append(curr_time)
 
+        self.regenerate_process_dict()
         return dict(sorted(completed.items())), g_list, t_list
                 
 
@@ -97,7 +102,7 @@ class ProcessControlBoard:
                 
                 g_list.append(c_p)
                 t_list.append(curr_time)
-
+        self.regenerate_process_dict()
         return dict(sorted(completed.items())), g_list, t_list
 
     def fcfs_solver(self, p_dict:dict) -> (dict, list ,list):
@@ -107,10 +112,14 @@ class ProcessControlBoard:
         g_list = []
         t_list = [0]
         p_q = [p for p in p_dict.keys()]
-        p_q.sort(key=lambda p: p_dict[p]['arrival'], reverse=True)
+        p_q.sort(key=lambda p: p_dict[p]['arrival'])
+        # for i in range(len(p_q) - 1):
+        #     if p_dict[p_q[i]]['arrival'] == p_dict[p_q[i+1]]['arrival']:
+        #         if p_q[i] < p_q[i+1]:
+        #             p_q[i], p_q[i+1] = p_q[i+1], p_q[i] 
 
         while len(p_q) > 0:
-            c_p = p_q.pop()
+            c_p = p_q.pop(0)
             # p_dict[c_p]['burst'] -= file
             curr_time += p_dict[c_p]['burst']
             
@@ -122,6 +131,7 @@ class ProcessControlBoard:
             g_list.append(c_p)
             t_list.append(curr_time)
         
+        self.regenerate_process_dict()
         return dict(sorted(completed.items())), g_list, t_list
 
     def sjf_solver(self, p_dict: dict) -> (dict, list, list):
@@ -130,14 +140,14 @@ class ProcessControlBoard:
         g_list = []
         t_list = [0]
         p_q = [p for p in p_dict.keys()]
-        p_q.sort(key=lambda p: p_dict[p]['burst'], reverse=True) 
-        for i in range(len(p_q) - 1):
-            if p_dict[p_q[i]]['burst'] == p_dict[p_q[i+1]]['burst']:
-                if p_dict[p_q[i]]['arrival'] < p_dict[p_q[i+1]]['arrival']:
-                    p_q[i], p_q[i+1] = p_q[i+1], p_q[i] 
+        p_q.sort(key=lambda p: p_dict[p]['burst']) 
+        # for i in range(len(p_q) - 1):
+        #     if p_dict[p_q[i]]['burst'] == p_dict[p_q[i+1]]['burst']:
+        #         if p_dict[p_q[i]]['arrival'] < p_dict[p_q[i+1]]['arrival']:
+        #             p_q[i], p_q[i+1] = p_q[i+1], p_q[i] 
 
         while len(p_q) > 0:
-            c_p = p_q.pop()
+            c_p = p_q.pop(0)
             curr_time += p_dict[c_p]['burst']
             
             completed[c_p] = {
@@ -148,6 +158,7 @@ class ProcessControlBoard:
             g_list.append(c_p)
             t_list.append(curr_time)
         
+        self.regenerate_process_dict()
         return dict(sorted(completed.items())), g_list, t_list
 
     def prio_solver(self, p_dict: dict) -> dict:
@@ -156,14 +167,18 @@ class ProcessControlBoard:
         g_list = []
         t_list = [0]
         p_q = [p for p in p_dict.keys()]
-        p_q.sort(key=lambda p: p_dict[p]['prio'], reverse=True)
-        for i in range(len(p_q) - 1):
-            if p_dict[p_q[i]]['prio'] == p_dict[p_q[i+1]]['prio']:
-                if p_q[i] < p_q[i+1]:
-                    p_q[i], p_q[i+1] = p_q[i+1], p_q[i]
-        # print(f"deb::{p_q}")
+        t_q = deepcopy(p_q)
+        # t_q.sort(key=lambda p: p_dict[p]['prio'])
+        # print(t_q)
+        p_q.sort(key=lambda p: p_dict[p]['prio'])
+        # for _ in range(len(p_q)):
+        #     for i in range(len(p_q) - 1):
+        #         if p_dict[p_q[i]]['prio'] == p_dict[p_q[i+1]]['prio']:
+        #             if (p_q[i] < p_q[i+1]):
+        #                 p_q[i], p_q[i+1] = p_q[i+1], p_q[i]
+        
         while len(p_q) > 0:
-            c_p = p_q.pop()
+            c_p = p_q.pop(0)
             curr_time += p_dict[c_p]['burst']
             
             completed[c_p] = {
@@ -174,6 +189,7 @@ class ProcessControlBoard:
             g_list.append(c_p)
             t_list.append(curr_time)
         
+        self.regenerate_process_dict()
         return dict(sorted(completed.items())), g_list, t_list       
 
 

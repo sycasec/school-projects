@@ -1,0 +1,31 @@
+
+NOTES
+
+Only one job can occupy memory!
+You need to record (average) fragmentation at each time delta
+You also need to record average wait time at each time delta,
+Also average throughput at each time delta -> total throughput / total time at end of run
+Also record jobs in queue for each time delta 
+Also make a way that you can just skip the waiting (standard run at t=1, skip t=0)
+
+This means that you need to make a scheduler
+
+
+TODO
+- Fragmentation for each memory
+  - Do not actually minus 
+
+SIDE NOTES
+  - { JOB_ID: { time, size, status } }
+  - { MEM_ID: { size, job, a_size } }
+  - the wait queue is just for wait queue length analysis
+  - TIME IS FROM JOB. WHEN WE CHECK THE TIME, WE CHECK JOBS[JOB_ID]["TIME"]
+
+
+CHECKLIST:
+  x algorithm
+  - prompt for method & file
+  - live loop
+  - stats & analysis
+
+
